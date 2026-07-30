@@ -1,3 +1,15 @@
+
+This is a fork of a script by Freddie Mac KD5FMU, Allan OCW3AW, and Jory W5GLE
+I just added on one section to install allmon3, and did a few tweaks.
+Not nearly as much as those 3 guys did to make this work.
+It's only here because I'm new to git and couldn't figure out how to do a pull request on KD5FMU's page.
+
+His original banner reproduced below.
+Cheers
+N5TIN
+
+
+
 <p align="center">
   <img
     src="images/asl3-multi-app-installer-banner.png"
