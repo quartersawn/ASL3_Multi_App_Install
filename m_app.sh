@@ -2,6 +2,7 @@
 
 # This script assists with the new install of AllStarLink version 3.
 # It installs SkywarnPlus, AllScan Dashboard, DVSwitch Server, and Supermon 7.4+.
+# and now allmon3
 #
 # Copyright (C) 2024 Freddie Mac - KD5FMU 
 # Copyright (C) 2024 Allan - OCW3AW
