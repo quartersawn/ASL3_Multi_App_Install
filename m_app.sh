@@ -29,11 +29,12 @@ DRY_RUN=false
 VERBOSE=false
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+#changed to ANSI-C so colors work with read - requires removal of "-e" from echo
+RED=$'\e[0;31m'
+GREEN=$'\e[0;32m'
+YELLOW=$'\e[1;33m'
+BLUE=$'\e[0;34m'
+NC=$'\e[0m' # No Color
 
 # Logging function
 log() {
@@ -44,17 +45,17 @@ log() {
     
     case $level in
         INFO)
-            echo -e "${GREEN}[INFO]${NC} $message"
+            echo "${GREEN}[INFO]${NC} $message"
             ;;
         WARN)
-            echo -e "${YELLOW}[WARN]${NC} $message"
+            echo "${YELLOW}[WARN]${NC} $message"
             ;;
         ERROR)
-            echo -e "${RED}[ERROR]${NC} $message"
+            echo "${RED}[ERROR]${NC} $message"
             ;;
         DEBUG)
             if [ "$VERBOSE" = true ]; then
-                echo -e "${BLUE}[DEBUG]${NC} $message"
+                echo "${BLUE}[DEBUG]${NC} $message"
             fi
             ;;
     esac
@@ -85,8 +86,9 @@ command_exists() {
 }
 
 # Function to check if a package is installed
+# dpkg -l "$1" >/dev/null 2>&1 is unreliable and will return true if the package was removed with apt remove/apt purge
 package_installed() {
-    dpkg -l "$1" >/dev/null 2>&1
+    dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "ok installed"
 }
 
 # Function to get Debian codename
@@ -116,7 +118,7 @@ get_debian_codename() {
 ensure_pip3() {
     if ! command_exists pip3; then
         log INFO "Installing python3-pip"
-        apt install -y python3-pip || error_exit "Failed to install python3-pip"
+        apt-get install -y python3-pip || error_exit "Failed to install python3-pip"
     fi
 }
 
@@ -175,6 +177,7 @@ Options:
   -s    Install supermon
   -w    Install skywarnplus
   -d    Install dvswitch
+  -m    Install allmon3
   -v    Verbose output
   -t    Dry run (test mode)
   -h    Display this help message
@@ -197,7 +200,7 @@ install_allscan() {
     for dep in "${deps[@]}"; do
         if ! package_installed "$dep"; then
             log INFO "Installing dependency: $dep"
-            apt install -y "$dep" || error_exit "Failed to install $dep"
+            apt-get install -y "$dep" || error_exit "Failed to install $dep"
         fi
     done
     
@@ -230,7 +233,7 @@ install_supermon() {
     for dep in "${deps[@]}"; do
         if ! package_installed "$dep"; then
             log INFO "Installing dependency: $dep"
-            apt install -y "$dep" || error_exit "Failed to install $dep"
+            apt-get install -y "$dep" || error_exit "Failed to install $dep"
         fi
     done
     
@@ -303,7 +306,7 @@ install_skywarnplus() {
     for dep in "${deps[@]}"; do
         if ! package_installed "$dep"; then
             log INFO "Installing dependency: $dep"
-            apt install -y "$dep" || error_exit "Failed to install $dep"
+            apt-get install -y "$dep" || error_exit "Failed to install $dep"
         fi
     done
     
@@ -318,7 +321,7 @@ install_skywarnplus() {
         # Try apt install for Bookworm and other versions
         if ! package_installed "python3-pydub"; then
             log INFO "Installing dependency: python3-pydub"
-            if apt install -y python3-pydub 2>/dev/null; then
+            if apt-get install -y python3-pydub 2>/dev/null; then
                 log INFO "Installed python3-pydub via apt"
             else
                 log WARN "python3-pydub not available via apt, falling back to pip3"
@@ -343,7 +346,7 @@ install_skywarnplus() {
     # Check if patch command is available
     if ! command_exists patch; then
         log INFO "Installing patch utility..."
-        apt install -y patch || error_exit "Failed to install patch utility"
+        apt-get install -y patch || error_exit "Failed to install patch utility"
     fi
     
     log INFO "Applying patch to swp-install..."
@@ -421,7 +424,7 @@ install_dvswitch() {
     for dep in "${deps[@]}"; do
         if ! package_installed "$dep"; then
             log INFO "Installing dependency: $dep"
-            apt install -y "$dep" || error_exit "Failed to install $dep"
+            apt-get install -y "$dep" || error_exit "Failed to install $dep"
         fi
     done
     
@@ -440,8 +443,8 @@ install_dvswitch() {
     rm -f bookworm
     
     # Update package list and install DVSwitch server
-    apt update
-    apt install -y dvswitch-server || error_exit "Failed to install dvswitch-server"
+    apt-get update
+    apt-get install -y dvswitch-server || error_exit "Failed to install dvswitch-server"
     
     # Update USRP port configuration
     local config_file="/usr/share/dvswitch/include/config.php"
@@ -458,8 +461,58 @@ install_dvswitch() {
     log INFO "DVSwitch Server installation completed successfully"
 }
 
+#function to install allmon3
+install_allmon() {
+	
+	if ! package_installed "allmon3"; then
+		log INFO "Installing allmon3..."
+	else
+		log INFO "allmon3 already installed - update will run"
+	fi
+    
+    if [ "$DRY_RUN" = true ]; then
+        log INFO "[DRY RUN] Would install allmon3"
+        return 0
+    fi
+    apt-get update || error_exit "Failed to update apt"
+	apt-get install -y allmon3 || error_exit "Failed to install $dep"
+	
+	echo "${GREEN}Allmon3 is installed at http://${IP_ADDRESS}/allmon3.${NC}"
+	echo "${GREEN}Configuration is required in allmon3.ini before allmon3 will be functional${NC}"
+	while true; do
+	read -p "${YELLOW}Set an allmon3 user and password now? (y/n)${NC}" ANSWER
+	case $ANSWER in
+		[Nn]* )
+			break
+			;;
+		[Yy]* )
+			read -r -e -p "${GREEN}Enter the username. This is case sensitive (default = admin): ${NC}" -i "admin" USERNAME
+            read -r -e -p "${GREEN}Enter the password - also case sensitive: ${NC}" PASSWORD
+			read -r -p "${GREEN}Set the password for username ${YELLOW}$USERNAME ${GREEN}to ${YELLOW}$PASSWORD${GREEN}? (y to accept)"  ANSWER
+			if [ "$ANSWER" != "Y" ] && [ "$ANSWER" != "y" ]; then 
+				continue
+			fi
+			allmon3-passwd "$USERNAME" --password "$PASSWORD"
+			break
+			;;
+		* )
+			echo "${GREEN}Please answer y or n${NC}"
+			;;
+	esac
+	done
+	systemctl restart allmon3
+	if [ $? -ne 0 ]; then
+		log WARN "allmon3 service failed to restart"
+		echo "${RED}allmon3 service failed to restart. Check the service status after the script completes${NC}"
+	else
+		log INFO "allmon installation completed successfully"
+	fi
+    
+}
+
+
 # Parse command-line arguments
-while getopts "aswdhtv" opt; do
+while getopts "aswdmhtv" opt; do
     case $opt in
         a)
             install_allscan_flag=true
@@ -472,6 +525,9 @@ while getopts "aswdhtv" opt; do
             ;;
         d)
             install_dvswitch_flag=true
+            ;;
+        m)
+            install_allmon_flag=true
             ;;
         t)
             DRY_RUN=true
@@ -507,6 +563,7 @@ fi
 [ "$install_allscan_flag" ] && install_allscan
 [ "$install_supermon_flag" ] && install_supermon
 [ "$install_skywarnplus_flag" ] && install_skywarnplus
+[ "$install_allmon_flag" ] && install_allmon
 [ "$install_dvswitch_flag" ] && install_dvswitch
 
 # Cleanup
