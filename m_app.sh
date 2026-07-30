@@ -6,6 +6,7 @@
 # Copyright (C) 2024 Freddie Mac - KD5FMU 
 # Copyright (C) 2024 Allan - OCW3AW
 # Copyright (C) 2024-2025 Jory A. Pratt - W5GLE
+# Copyright (C) 2026 Steve - N5TIN
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
