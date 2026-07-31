@@ -554,6 +554,7 @@ if [ "$OPTIND" -eq 1 ]; then
     usage
     exit 1
 fi
+
 #check ASL3 installed
 if ! package_installed "asl3"; then
     DRY_RUN=true
