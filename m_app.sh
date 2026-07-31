@@ -479,8 +479,8 @@ install_allmon() {
     apt-get update || error_exit "Failed to update apt"
 	apt-get install -y allmon3 || error_exit "Failed to install $dep"
 	
-	echo "${GREEN}Allmon3 is installed at http://${IP_ADDRESS}/allmon3.${NC}"
-	echo "${GREEN}Configuration is required in allmon3.ini before allmon3 will be functional${NC}"
+	log INFO "Allmon3 is installed at http://${IP_ADDRESS}/allmon3."
+	log INFO "Configuration is required in allmon3.ini before allmon3 will be functional"
 	while true; do
 	read -p "${YELLOW}Set an allmon3 user and password now? (y/n)${NC}" ANSWER
 	case $ANSWER in
@@ -504,8 +504,7 @@ install_allmon() {
 	done
 	systemctl restart allmon3
 	if [ $? -ne 0 ]; then
-		log WARN "allmon3 service failed to restart"
-		echo "${RED}allmon3 service failed to restart. Check the service status after the script completes${NC}"
+		log WARN "allmon3 service failed to restart. Check the service status after the script completes"
 	else
 		log INFO "allmon installation completed successfully"
 	fi
@@ -549,11 +548,16 @@ while getopts "aswdmhtv" opt; do
             ;;
     esac
 done
-
+export $DRY_RUN
 # If no options are provided, show usage and exit
 if [ "$OPTIND" -eq 1 ]; then
     usage
     exit 1
+fi
+#check ASL3 installed
+if ! package_installed "asl3"; then
+    DRY_RUN=true
+    log WARN "ASL3 is not detected. This will be a dry run."
 fi
 
 # Check if configuration file exists
